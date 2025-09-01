@@ -1,0 +1,94 @@
+{
+  "admin": {
+    "admin@regdec.com": {
+      "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+      "role": "admin"
+    }
+  },
+  "user": {
+    "user@regdec.com": {
+      "password": "e606e38b0d8c19b24cf0ee3808183162ea7cd63ff7912dbb22b5e803286b4446",
+      "role": "user"
+    },
+    "hebahemaya2017@gmail.com": {
+      "password": "1b93d375d3acf2f8650a652380a99f8c85f89c16d66d7692c35a041d36caf12c",
+      "role": "user"
+    },
+    "Ra.diligencepharma@gmail.com": {
+      "password": "9af02b02ded5d2ef93b9969532de3a4328ee65824ef925052ba0f69beb0173f2",
+      "role": "user"
+    },
+    "ra.diligencepharma@gmail.com": {
+      "password": "9af02b02ded5d2ef93b9969532de3a4328ee65824ef925052ba0f69beb0173f2",
+      "role": "user"
+    },
+    "Sh.nezamy@gmail.com": {
+      "password": "f6a44d5d81c02ad0501a43831541d61355aabc8944321eea41717261fa092bf8",
+      "role": "user"
+    },
+    "Falcon.vigil7@gmail.com": {
+      "password": "09b7acc07bc5a5094d1fe6baaefe9efd8c5508f2e9364d32d3a10940a27235f4",
+      "role": "user"
+    },
+    "Amany.Maher@pharco-corp.com": {
+      "password": "694f1053947098131ec2251fe6dbdad54357efb45ed5d61ac9ed2ed86e0789fc",
+      "role": "user"
+    },
+    "maimostafa873@gmail.com": {
+      "password": "3005ae3a520169223243fad723a02768e561d5e500ae2c8e2c920643f7f66e9d",
+      "role": "user"
+    },
+    "omnia.abdelfatah24@gmail.com": {
+      "password": "07d08e5f9e4ac5d38df8ebe892163a81a4c4d8f21977746521ebda56b3c2a04b",
+      "role": "user"
+    },
+    "dinasamir663@gmail.com": {
+      "password": "626817f4203d9fa4c867e404f566fc92ffd3b955a43df2c5ebfa800cc4f0b819",
+      "role": "user"
+    },
+    "mohamed.amin.okba@gmail.com": {
+      "password": "32ec54cd1483c2af92a5a8f941012b2fcd8a1fe8fdc5b8f452c60602bcf4f01d",
+      "role": "user"
+    },
+    "asmaahussien311@gmail.com": {
+      "password": "a056e3e9bdf1830f2cf99239d92ff5f56d3c6de3ea22661f96cad67d5bd49921",
+      "role": "user"
+    },
+    "Dalia.elshafie@gmail.com": {
+      "password": "f4c983bd06bb22c6aa954e064b3284725ee4e227813d4eb25e356ba9de7feb54",
+      "role": "user"
+    },
+    "noha858@gmail.com": {
+      "password": "36c04d85a92a568362491d93b45c4bbc8a0969e61687d799ece469a8a1879da9",
+      "role": "user"
+    },
+    "doaa_aly82@hotmail.com": {
+      "password": "57a3b23b2b1ad183589661d6bf6219bcdbc47da6c7cbe132c600941b9a8a4dc6",
+      "role": "user"
+    },
+    "nardeennagui91@gmail.com": {
+      "password": "7afa0399734bf1dbbcb4b4adb110f91a8f73c240d6c9e2fc4f03d3ac5cc4a0cd",
+      "role": "user"
+    },
+    "mohammedismaill002@gmail.com": {
+      "password": "914f50864b49c8a79c3dadfac9ef942bdb76be4788cded2a17bb333d215f47e8",
+      "role": "user"
+    },
+    "afra.atta@yahoo.com": {
+      "password": "4f8784f9ded430df95d7e13767a9394b9b42e9e9639473b8ea46e8a3d8f3db46",
+      "role": "user"
+    },
+    "dr_ghada_gawad@yahoo.com": {
+      "password": "7ecc053e42c41e5e7c259c8bd3c0461bc0c6eeac53685ee22d3257b232fe347c",
+      "role": "user"
+    },
+    "Rababsakr145@gmail.com": {
+      "password": "00216451578990d1175af2419e768cd649e328e0bfa3002e06dd2e279e7b8990",
+      "role": "user"
+    },
+    "Shawkirabab@hotmail.com": {
+      "password": "6dfccc7a3f0beaee0aec37295f5d6885a5b144576af2b11a27c866f4f19c5fc9",
+      "role": "user"
+    }
+  }
+}

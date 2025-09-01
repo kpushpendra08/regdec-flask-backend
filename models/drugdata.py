@@ -1,0 +1,33 @@
+from .base import db, BaseModel
+
+class Drugdata(BaseModel):
+    __tablename__ = 'drugdata'
+
+    drugdata_id = db.Column(db.Integer, primary_key=True)
+    drugdata_reg_no = db.Column(db.Integer)
+    drugdata_active_ingredient = db.Column(db.Text)
+    drugdata_trade_name = db.Column(db.String(255))
+    drugdata_product_type = db.Column(db.String(100))
+    drugdata_dosage_form = db.Column(db.String(100))
+    drugdata_shelf_life = db.Column(db.String(100))
+    drugdata_route = db.Column(db.String(100))
+    drugdata_strength = db.Column(db.String(100))
+    drugdata_pack_unit = db.Column(db.String(100))
+    drugdata_approved_packs = db.Column(db.Text)
+    drugdata_applicant = db.Column(db.String(255))
+    drugdata_registration_no = db.Column(db.String(100))
+    drugdata_registration_type = db.Column(db.String(100))
+    drugdata_marketing_type = db.Column(db.String(100))
+    drugdata_marketing_status = db.Column(db.String(100))
+    drugdata_license_status = db.Column(db.String(100))
+    drugdata_price_status = db.Column(db.String(100))
+    drugdata_physical_characters = db.Column(db.Text)
+    drugdata_storage_conditions = db.Column(db.Text)
+    drugdata_registration_data = db.Column(db.Text)
+    drugdata_combo_pack = db.Column(db.String(100))
+    drugdata_reference = db.Column(db.Text)
+    drugdata_leaflet = db.Column(db.String(500))
+    drugdata_country = db.Column(db.String(100))
+    drugdata_comments = db.Column(db.String(500))
+    drugdata_page_number = db.Column(db.String(100))
+    drugdata_row_number = db.Column(db.String(100))
