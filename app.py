@@ -113,7 +113,6 @@ def fix_date_string_todate(date_str):
         "%Y-%m-%dT%H:%M:%S",# e.g., 2023-08-30T14:30:00 (ISO 8601)
         "%d-%m-%Y"
     ]
-    
     for date_format in date_formats:
         try:
             # Try parsing the date string with the current format
@@ -126,10 +125,18 @@ def fix_date_string_todate(date_str):
 
 def fix_date_string(date_str):
     parts = date_str.strip().split("-")
-    if len(parts) == 3 and len(parts[2]) < 4:
+    if len(parts) > 1 and not str(parts[1]).isdigit():
+        # Pad the year with zero(s) at the end
+        if len(parts[1]) < 2:
+            parts[1] = parts[1].rjust(2, '0')
+        if len(parts[2]) < 4:
+        parts[2] = parts[2].ljust(4, '0')
+        return fix_date_string_todate("-".join(parts))
+    elif len(parts) == 3 and len(parts[2]) < 4 and len(date_str) != 10:
         # Pad the year with zero(s) at the end
         parts[2] = parts[2].ljust(4, '0')
         return fix_date_string_todate("-".join(parts))
+    
     return fix_date_string_todate(date_str)
 
 def parse_dates_field(raw_value):    
@@ -175,26 +182,31 @@ def truncate_table(model):
 
 
 def uploadDecreeData(df):
-
     try:        
         # Clean column names
-        df.columns = df.columns.str.strip().str.replace('.', '', regex=False).str.replace('/', '', regex=False).str.replace(' ', '', regex=False).str.replace('\n', '', regex=False).str.lower()
+        df.columns = df.columns.str.strip().str.replace('.', '', regex=False)\
+                                .str.replace('/', '', regex=False)\
+                                .str.replace(' ', '', regex=False)\
+                                .str.replace('\n', '', regex=False).str.lower()
         
         print(f"  Total records: {len(df)}")
         print(f"  Columns: {list(df.columns)}")
+
         truncate_table(Decree)
         truncate_table(DecreeTechnicalCommitteeDate)
         truncate_table(DecreeSessionDate)
-        # Show sample data
-        if len(df) > 0:
-            try:
+
+        if len(df) == 0:
+            return "No data to insert."
+
                 df = df.fillna('')
-                # print("\nSample data (first row):")
-                # for col in list(df.columns)[:5]:
-                #     print(f"  {col}: {df.iloc[0][col]}")
-                records = []
-                for _, row in df.iterrows():
-                    data = {
+
+        decree_data = []
+        tech_committee_dates = []
+        session_dates = []
+
+        for idx, row in df.iterrows():
+            decree_row = {
                         "decree_year": row.get('year'),
                         "decree_decreenumber":row.get('decreenumber'),
                         "decree_typeofcommittee":row.get('typeofcommittee'),
@@ -206,37 +218,56 @@ def uploadDecreeData(df):
                         "decree_category":row.get('category'),
                         "decree_pageno":row.get('pageno'),
                         "decree_link":row.get('link'),
-                        "decree_name_for_the_link":row.get('nameforthelink')
+                "decree_name_for_the_link": row.get('nameforthelink'),
                     }
-                    technicalDate = parse_dates_field(row.get('dateoftechnicalcommittee'))
-                    sessionDate = parse_dates_field(row.get('dateofsessionimplementationofdecision'))
-                    record = Decree(**data)
-                    # Add technical committee dates
-                    for dtc in technicalDate:
-                        record.technical_committee_dates.append(
-                            DecreeTechnicalCommitteeDate(date=dtc.date())
-                        )
 
-                    # Add session dates
-                    for ds in sessionDate:
-                        record.session_dates.append(
-                            DecreeSessionDate(date=ds.date())
-                        )
-                    records.append(record)
-                db.session.add_all(records)
-                db.session.commit()
-                message = f"Inserted {len(records)} rows into database."
+            decree_data.append(decree_row)
+
+        # Insert decrees using bulk insert
+        inserted = bulk_batch_insert(decree_data, Decree)
+
+        # Now fetch all decrees to get their IDs (assuming there's a unique constraint on decree number + year or similar)
+        decrees = Decree.query.all()
+        decree_lookup = {(d.decree_year, d.decree_decreenumber): d.decree_id for d in decrees}
+        # print("======decree_lookup0", decree_lookup)
+        # Prepare related date tables
+        for idx, row in df.iterrows():
+            key = (row.get('year'), row.get('decreenumber'))
+            decree_id = decree_lookup.get(key)
+
+            if not decree_id:
+                print(f"Warning: No decree found for row {idx} with key {key}")
+                continue
+
+            technical_dates = parse_dates_field(row.get('dateoftechnicalcommittee'))
+            # print("=======", row.get('dateoftechnicalcommittee'), technical_dates)
+            for dt in technical_dates:
+                tech_committee_dates.append({
+                    "decree_id": decree_id,
+                    "date": dt.date()
+                })
+
+            session_impl_dates = parse_dates_field(row.get('dateofsessionimplementationofdecision'))
+            # print("=======",decree_id, row.get('session_impl_dates'), session_impl_dates)
+            for dt in session_impl_dates:
+                session_dates.append({
+                    "decree_id": decree_id,
+                    "date": dt.date()
+                })
+
+        # Bulk insert related dates
+        bulk_batch_insert(tech_committee_dates, DecreeTechnicalCommitteeDate)
+        bulk_batch_insert(session_dates, DecreeSessionDate)
+
+        message = f"Inserted {inserted['inserted']} decrees with related dates."
                 print("=====", message)
-                return message
-            except Exception as e:
-                db.session.rollback()
-                message = f"Error: {e}"
                 return message
 
     except Exception as e:
         print("===err", e)
         error = f"Error reading file: {str(e)}"
         return error
+
 
 
 
@@ -786,8 +817,15 @@ def search():
         else:
             status = 'Pending'
             status_class = 'pending'
+        technical_committee_date = None
+        if row.get('technical_committee_dates'):
         technical_committee_dates = datetime.strptime(row.get('technical_committee_dates'), "%Y-%m-%d")
         technical_committee_date = technical_committee_dates.strftime("%m-%b-%Y")
+        session_dates = None
+        if row.get('session_dates'):
+            session_date_format = parse_dates_field(row.get('session_dates'))            
+            session_dates = ",".join(d.strftime("%m-%b-%Y") for d in session_date_format)
+
         results.append({
             'id': idx + 1,
             'year': str(row.get('decree_year', 'N/A')),
@@ -805,9 +843,10 @@ def search():
             'decree_country': str(row.get('decree_country', '#')),
             'status': status,
             'status_class': status_class,
-            'dateTechnicalCommittee': technical_committee_date            
+            'dateTechnicalCommittee': technical_committee_date,
+            'session_dates': session_dates           
         })
-    
+    results.sort(key=lambda x: int(x['year']) if x['year'].isdigit() else 0, reverse=True)
     return jsonify({
         'success': True,
         'results': results,
@@ -979,7 +1018,7 @@ def drugdata():
             "drugdata_page_number": row.get('drugdata_page_number'),
             "drugdata_row_number": row.get('drugdata_row_number'),
         })
-    
+    results.sort(key=lambda x: int(x['drugdata_shelf_life']) if x['drugdata_shelf_life'].isdigit() else 0, reverse=True)
     return jsonify({
         'success': True,
         'results': results,
