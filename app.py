@@ -16,7 +16,7 @@ from functools import wraps
 from init_app import create_app
 from models import db, User, Decree, DecreeTechnicalCommitteeDate, \
     DecreeSessionDate, ActiveIngredient, PharmaWarning, Drugdata, \
-    Generics, Package, DrugCompany
+    Generics, Package, DrugCompany, DrugPrice, Company
 import jwt
 app = create_app()
 
@@ -130,7 +130,7 @@ def fix_date_string(date_str):
         if len(parts[1]) < 2:
             parts[1] = parts[1].rjust(2, '0')
         if len(parts[2]) < 4:
-        parts[2] = parts[2].ljust(4, '0')
+            parts[2] = parts[2].ljust(4, '0')
         return fix_date_string_todate("-".join(parts))
     elif len(parts) == 3 and len(parts[2]) < 4 and len(date_str) != 10:
         # Pad the year with zero(s) at the end
@@ -139,7 +139,7 @@ def fix_date_string(date_str):
     
     return fix_date_string_todate(date_str)
 
-def parse_dates_field(raw_value):    
+def parse_dates_field(raw_value):  
     if isinstance(raw_value, list):
         result = []
         for item in raw_value:
@@ -182,13 +182,13 @@ def truncate_table(model):
 
 
 def uploadDecreeData(df):
-    try:        
+    try:
         # Clean column names
         df.columns = df.columns.str.strip().str.replace('.', '', regex=False)\
                                 .str.replace('/', '', regex=False)\
                                 .str.replace(' ', '', regex=False)\
                                 .str.replace('\n', '', regex=False).str.lower()
-        
+
         print(f"  Total records: {len(df)}")
         print(f"  Columns: {list(df.columns)}")
 
@@ -199,7 +199,7 @@ def uploadDecreeData(df):
         if len(df) == 0:
             return "No data to insert."
 
-                df = df.fillna('')
+        df = df.fillna('')
 
         decree_data = []
         tech_committee_dates = []
@@ -207,19 +207,19 @@ def uploadDecreeData(df):
 
         for idx, row in df.iterrows():
             decree_row = {
-                        "decree_year": row.get('year'),
-                        "decree_decreenumber":row.get('decreenumber'),
-                        "decree_typeofcommittee":row.get('typeofcommittee'),
-                        "decree_decision":row.get('decision'),
-                        "decree_active_ingredient":row.get('activeingredientdosageformstrength'),
-                        "decree_standarized_decision":row.get('standarizeddecision'),
-                        "decree_reason_of_decision":row.get('reasonofdecision'),
-                        "decree_summary_of_decision":row.get('summaryofdecision'),
-                        "decree_category":row.get('category'),
-                        "decree_pageno":row.get('pageno'),
-                        "decree_link":row.get('link'),
+                "decree_year": row.get('year'),
+                "decree_decreenumber": row.get('decreenumber'),
+                "decree_typeofcommittee": row.get('typeofcommittee'),
+                "decree_decision": row.get('decision'),
+                "decree_active_ingredient": row.get('activeingredientdosageformstrength'),
+                "decree_standarized_decision": row.get('standarizeddecision'),
+                "decree_reason_of_decision": row.get('reasonofdecision'),
+                "decree_summary_of_decision": row.get('summaryofdecision'),
+                "decree_category": row.get('category'),
+                "decree_pageno": row.get('pageno'),
+                "decree_link": row.get('link'),
                 "decree_name_for_the_link": row.get('nameforthelink'),
-                    }
+            }
 
             decree_data.append(decree_row)
 
@@ -260,8 +260,8 @@ def uploadDecreeData(df):
         bulk_batch_insert(session_dates, DecreeSessionDate)
 
         message = f"Inserted {inserted['inserted']} decrees with related dates."
-                print("=====", message)
-                return message
+        print("=====", message)
+        return message
 
     except Exception as e:
         print("===err", e)
@@ -528,10 +528,40 @@ def drugcompany(df):
         error = f"Error reading file: {str(e)}"
         return error
     
+def drugprice(df):
+    try:
+        # Clean column names
+        df.columns = df.columns.str.strip().str.replace('.', '', regex=False).str.replace('/', '', regex=False).str.replace(' ', '', regex=False).str.replace('\n', '', regex=False).str.lower()
+        
+        print(f"  Total records: {len(df)}")
+        print(f"  Columns: {list(df.columns)}")
+        truncate_table(DrugPrice)
+        if len(df) > 0:
+            try:
+                df = df.replace({np.nan: None, pd.NaT: None})
+                records = []
+                for _, row in df.iterrows():
+                    data = {
+                        "drug_price_reg_no": row.get('registrationnumber'),
+                        "drug_pack": row.get('pack'),
+                        "drug_price": row.get('price')                        
+                    }
+                    records.append(data)
+                msg = bulk_batch_insert(records, DrugPrice)    
+                return "inserted"
+            except Exception as e:
+                db.rollback()
+                print("=====", e)
+                message = f"Error: {e}"
+                return message
 
+    except Exception as e:
+        print("===err", e)
+        error = f"Error reading file: {str(e)}"
+        return error
+    
 @app.route('/api/v1/upload', methods=['POST'])
 def upload():
-
     file = request.files['file']
     filename = secure_filename(file.filename)
     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -569,9 +599,86 @@ def upload():
         msg = packages(df)
     elif file_type == "drugcompany":
         msg = drugcompany(df)
+    elif file_type == "drugprice":
+        msg = drugcompany(df)
     elif file_type == "all":
         pass
     return jsonify({"success": True, "message": msg}), 200
+
+
+def addBulkUserData(df):
+    try:
+        # Clean column names
+        df.columns = df.columns.str.strip().str.replace('.', '', regex=False).str.replace('/', '', regex=False).str.replace(' ', '', regex=False).str.replace('\n', '', regex=False).str.replace("'", '', regex=False).str.lower()
+        
+        print(f"  Total records: {len(df)}")
+        print(f"  Columns: {list(df.columns)}")
+        if len(df) > 0:
+            try:
+                df = df.replace({np.nan: None, pd.NaT: None})
+                records = []
+                for index, row in df.iterrows():
+                    print(index)
+                    try:
+                        data = {
+                            "user_name": row.get('whatsyourname?'),
+                            "user_email": row.get('whatsyouremailaddress?'),
+                            "user_password": hash_password("Regdec@2025"),
+                            "meta_data": {
+                                "submissionid": row.get('submissionid'),
+                                "respondentid": row.get('respondentid'),
+                                # "submittedat": row.get('submittedat'),
+                                "user_contact": row.get('whatsappnumber(optional)'),
+                                "jobtitlerole": row.get('jobtitlerole'),
+                                "linkedinprofile": row.get('linkedinprofile'),
+                                "areaofinterestinregdec": row.get('areaofinterestinregdec'),
+                                "willyouattendpharmaconex2025?": row.get('willyouattendpharmaconex2025?'),
+                                "wedlovetohearfromyou—anyfeedback,ideas,ornotesaremorethanwelcome": row.get('we’dlovetohearfromyou—anyfeedback,ideas,ornotesaremorethanwelcome💬'),
+                                "email": row.get('email'),
+                                "linkedin": row.get('linkedin'),
+                                "whatsapp": row.get('whatsapp'),
+                                "notesfromhisexperience": row.get('notesfromhisexperience')
+                            }                      
+                        }
+                        records.append(data)
+                        user = User(**data)
+                        db.session.add(user)
+                        db.session.commit()
+                    except Exception as e:
+                        db.session.rollback()
+                        print("=====", e)  
+                return "inserted"
+            except Exception as e:
+                db.session.rollback()
+                print("=====", e)
+                message = f"Error: {e}"
+                return message
+
+    except Exception as e:
+        print("===err", e)
+        error = f"Error reading file: {str(e)}"
+        return error
+
+@app.route('/api/v1/addbulkuser', methods=['POST'])
+def addBulkUser():
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(path)
+    result = {}
+    if filename.endswith('.csv'):
+        df = read_file_with_multiple_encodings(path)
+    elif filename.endswith('.xlsx'):
+        dfs = pd.read_excel(file, sheet_name=None)
+        print("====dfs", len(dfs))
+        for sheet_name, df in dfs.items():
+            print("===sheetname", sheet_name)
+            addBulkUserData(df)
+            # result[sheet_name] = df.head().to_dict()  # just show first few rows per sheet
+    else:
+        return jsonify({"success": False, "message": "Unsupported file format."}), 401
+    
+    return jsonify({"success": True, "message": "msg"}), 200
 
 # Authentication routes
 @app.route('/api/v1/login', methods=['POST'])
@@ -630,7 +737,7 @@ def change_password():
         if new_password != confirm_password:
             return jsonify({'message': 'New passwords do not match'}), 400
 
-        user.password_hash = hash_password(new_password)
+        user.user_password = hash_password(new_password)
         db.session.commit()
 
         return jsonify({'message': 'Password updated successfully'}), 200
@@ -640,6 +747,87 @@ def change_password():
     except jwt.InvalidTokenError:
         return jsonify({'message': 'Invalid token'}), 401
 
+
+@app.route('/api/v1/users', methods=['GET'])
+def get_all_users():
+    """Get all users (admin only)"""
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({'message': 'Missing token'}), 401
+
+    try:
+        decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        decoded_user = decoded['user']
+        
+        # Check if user is admin
+        if decoded_user.get('user_role') != 'admin':
+            return jsonify({'message': 'Unauthorized. Admin access required'}), 403
+
+        # Get all users except admins
+        users = User.query.filter(User.user_role != 'admin').all()
+        user_list = [
+            {
+                'user_id': user.user_id,
+                'user_email': user.user_email,
+                'user_name': user.user_name,
+                'user_role': user.user_role,
+                'user_active': user.user_active
+            }
+            for user in users
+        ]
+
+        return jsonify({'success': True, 'users': user_list}), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({'message': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'message': 'Invalid token'}), 401
+
+@app.route('/api/v1/reset-user-password', methods=['POST'])
+def reset_user_password():
+    """Reset a user's password (admin only)"""
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({'message': 'Missing token'}), 401
+
+    try:
+        decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        decoded_user = decoded['user']
+        
+        # Check if user is admin
+        if decoded_user.get('user_role') != 'admin':
+            return jsonify({'message': 'Unauthorized. Admin access required'}), 403
+
+        data = request.get_json()
+        user_email = data.get('user_email')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+
+        if not user_email or not new_password or not confirm_password:
+            return jsonify({'message': 'All fields are required'}), 400
+
+        if new_password != confirm_password:
+            return jsonify({'message': 'Passwords do not match'}), 400
+
+        # Find the user to reset password for
+        user = User.query.filter_by(user_email=user_email).first()
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        # Prevent resetting admin passwords
+        if user.user_role == 'admin':
+            return jsonify({'message': 'Cannot reset admin user passwords'}), 403
+
+        # Update the password
+        user.user_password = hash_password(new_password)
+        db.session.commit()
+
+        return jsonify({'message': f'Password reset successfully for {user_email}'}), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({'message': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'message': 'Invalid token'}), 401
 
 @app.route('/api/v1/logout')
 def logout():
@@ -660,18 +848,71 @@ def register():
         return jsonify({'success': False, 'message': 'All fields are required'}), 400
     
 
-    if User.query.filter_by(username=username).first():
+    if User.query.filter_by(user_name=username).first():
         return jsonify({"success": False, "message": "Username already exists"}), 409
-
-    user = User(
-        username=username,
-        email=email,
-        password_hash=hash_password(password)
-    )
-    db.session.add(user)
-    db.session.commit()
     
-    return jsonify({'success': True, 'message': 'Registration successful'})
+    if User.query.filter_by(user_email=email).first():
+        return jsonify({"success": False, "message": "Email already exists"}), 409
+
+    # Optional user fields
+    name = data.get('name', '').strip()
+    job_title = data.get('jobTitle', '').strip()
+    linkedin = data.get('linkedin', '').strip()
+    country = data.get('country', '').strip()
+    interest = data.get('interest', '').strip()
+    attend = data.get('attend', False)
+    whatsapp = data.get('whatsapp', '').strip()
+    feedback = data.get('feedback', '').strip()
+
+    # Handle company info if provided
+    company_data = data.get('company')
+    company_id = None
+    if company_data:
+        company_name = company_data.get('name', '').strip()
+        company_location = company_data.get('location', '').strip()
+        if company_name:  # Only create company if name is provided
+            company = Company(
+                company_name=company_name,
+                company_address=company_location
+            )
+            db.session.add(company)
+            db.session.commit()  # Commit to get the company_id
+            company_id = company.company_id
+
+    try:
+        # Create new user instance
+        user = User(
+            user_name=username,
+            user_email=email,
+            user_password=hash_password(password),
+            user_role="user",
+            user_country=country,
+            user_company_id=company_id,
+            user_contact=whatsapp,
+            meta_data= {
+                "user_contact": whatsapp,
+                "jobtitlerole": job_title,
+                "linkedinprofile": linkedin,
+                "areaofinterestinregdec": interest,
+                "willyouattendpharmaconex2025?": attend,
+                "wedlovetohearfromyou—anyfeedback,ideas,ornotesaremorethanwelcome": feedback
+            }
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Registration successful'})
+    except IntegrityError as e:
+        db.session.rollback()
+        # Check if it's a duplicate email error
+        if 'user_email' in str(e.orig):
+            return jsonify({'success': False, 'message': 'Email already exists'}), 409
+        else:
+            return jsonify({'success': False, 'message': 'Registration failed. Please try again.'}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"Registration error: {str(e)}")
+        return jsonify({'success': False, 'message': 'An error occurred during registration'}), 500
 
 @app.route('/api/v1/user')
 @login_required
@@ -788,13 +1029,10 @@ def search():
     
     filtered_df = df.copy() 
 
-
     if search_query:
         mask = pd.Series([False] * len(filtered_df))
-        if 'activeingredientdosageformstrength' in df.columns:
-            mask |= filtered_df['activeingredientdosageformstrength'].astype(str).str.lower().str.contains(search_query, na=False, regex=False)
-        if 'decree_reason_of_decision' in df.columns:
-            mask |= filtered_df['decree_reason_of_decision'].astype(str).str.lower().str.contains(search_query, na=False, regex=False)
+        if 'decree_active_ingredient' in df.columns:
+            mask |= filtered_df['decree_active_ingredient'].astype(str).str.lower().str.contains(search_query, na=False, regex=False)
         filtered_df = filtered_df[mask]
     
     # Pagination
@@ -819,13 +1057,13 @@ def search():
             status_class = 'pending'
         technical_committee_date = None
         if row.get('technical_committee_dates'):
-        technical_committee_dates = datetime.strptime(row.get('technical_committee_dates'), "%Y-%m-%d")
-        technical_committee_date = technical_committee_dates.strftime("%m-%b-%Y")
+            technical_committee_dates = datetime.strptime(row.get('technical_committee_dates'), "%Y-%m-%d")
+            technical_committee_date = technical_committee_dates.strftime("%d-%b-%Y")
         session_dates = None
         if row.get('session_dates'):
             session_date_format = parse_dates_field(row.get('session_dates'))            
             session_dates = ",".join(d.strftime("%m-%b-%Y") for d in session_date_format)
-
+        committee_summary = [item.strip() for item in str(row.get('decree_summary_of_decision', 'N/A')).split("•") if item.strip()]
         results.append({
             'id': idx + 1,
             'year': str(row.get('decree_year', 'N/A')),
@@ -835,10 +1073,10 @@ def search():
             'decision': str(row.get('decree_decision', 'N/A')),
             'standardDecision': str(row.get('decree_standarized_decision', 'N/A')),
             'reason': str(row.get('decree_reason_of_decision', 'N/A')),
-            'summary': str(row.get('decree_summary_of_decision', 'N/A')),
+            'summary': committee_summary,
             'category': str(row.get('decree_category', 'N/A')),
             'pageno': row.get('decree_pageno', '1'),
-            'link': str(row.get('decree_link', '#')),
+            'link': str(row.get('decree_link', '#')).strip(),
             'name_link': str(row.get('decree_name_for_the_link', '#')),
             'decree_country': str(row.get('decree_country', '#')),
             'status': status,
@@ -847,6 +1085,7 @@ def search():
             'session_dates': session_dates           
         })
     results.sort(key=lambda x: int(x['year']) if x['year'].isdigit() else 0, reverse=True)
+    print("=====>", results)
     return jsonify({
         'success': True,
         'results': results,
@@ -946,6 +1185,9 @@ def drugdata():
     search_query = data.get('search', '').lower().strip()
     page = int(data.get('page', 1))
     per_page = int(data.get('per_page', 20))
+    marketingTypes = data.get('marketingTypes', [])
+    registrationTypes = data.get('registrationTypes', [])
+    marketingStatus = data.get('marketingStatus', [])
 
     query = """
     SELECT 
@@ -966,7 +1208,25 @@ def drugdata():
             mask |= filtered_df['drugdata_active_ingredient'].astype(str).str.lower().str.contains(search_query, na=False, regex=False)
         if 'pharma_warning_purpose_of_decision' in df.columns:
             mask |= filtered_df['pharma_warning_purpose_of_decision'].astype(str).str.lower().str.contains(search_query, na=False, regex=False)
+        if 'drugdata_trade_name' in df.columns:
+            mask |= filtered_df['drugdata_trade_name'].astype(str).str.lower().str.contains(search_query, na=False, regex=False)
+        if 'drugdata_applicant' in df.columns:
+            mask |= filtered_df['drugdata_applicant'].astype(str).str.lower().str.contains(search_query, na=False, regex=False)
         filtered_df = filtered_df[mask]
+
+    # ✅ Filter by marketingTypes
+    if marketingTypes and 'drugdata_marketing_type' in df.columns:
+        filtered_df = filtered_df[filtered_df['drugdata_marketing_type'].isin(marketingTypes)]
+
+    # ✅ Filter by registrationTypes
+    if registrationTypes and 'drugdata_registration_type' in df.columns:
+        filtered_df = filtered_df[filtered_df['drugdata_registration_type'].isin(registrationTypes)]
+
+    # ✅ Filter by marketingStatus
+    if marketingStatus and 'drugdata_marketing_status' in df.columns:
+        filtered_df = filtered_df[filtered_df['drugdata_marketing_status'].isin(marketingStatus)]
+        
+        
     
     # Pagination
     total = len(filtered_df)
