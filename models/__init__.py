@@ -10,3 +10,4 @@ from .pharma_warning import PharmaWarning
 from .drugcompany import DrugCompany  # optional
 from .package import Package
 from .generics import Generics
+from .drugprice import DrugPrice

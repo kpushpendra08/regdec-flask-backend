@@ -1319,6 +1319,66 @@ def drugdatadetails(drug_id):
         'results': data
     })
 
+@app.route('/api/v1/dashboard-summary', methods=['POST'])
+@login_required
+def dashboard_summary():
+    """Get dashboard summary statistics for a search query"""
+    
+    data = request.get_json()
+    search_query = data.get('search', '').lower().strip() if data else ''
+    
+    # Get Regulatory Insights (Drugdata) summary
+    drugdata_query = "SELECT drugdata_marketing_status FROM drugdata"
+    if search_query:
+        drugdata_query += f" WHERE LOWER(drugdata_active_ingredient) LIKE '%{search_query}%'"
+    
+    drugdata_df = pd.read_sql_query(drugdata_query, engine)
+    drugdata_counts = drugdata_df['drugdata_marketing_status'].value_counts().to_dict()
+    regulatory_insights = {
+        'total': len(drugdata_df),
+        **drugdata_counts
+    }
+    
+    # Get Technical Decrees summary - get all distinct decisions with counts
+    decree_query = """
+    SELECT decree_standarized_decision 
+    FROM decree
+    """
+    if search_query:
+        decree_query += f" WHERE LOWER(decree_active_ingredient) LIKE '%{search_query}%'"
+    
+    decree_df = pd.read_sql_query(decree_query, engine)
+    
+    # Get distinct decisions and their counts
+    decision_counts = decree_df['decree_standarized_decision'].value_counts().to_dict()
+    # Initialize technical_decrees with total
+    technical_decrees = {
+        'total': len(decree_df),
+        **decision_counts
+    }
+
+    # Get Pharmacology Warnings summary
+    warning_query = "SELECT pharma_warning_decision_type FROM pharma_warning"
+    if search_query:
+        warning_query += f" WHERE LOWER(pharma_warning_active_ingredient) LIKE '%{search_query}%'"
+    
+    warning_df = pd.read_sql_query(warning_query, engine)
+
+    # Get distinct decisions and their counts
+    warning_decision_type_cnt = warning_df['pharma_warning_decision_type'].value_counts().to_dict()
+    # Initialize technical_decrees with total
+    pharmacology_warnings = {
+        'total': len(warning_df),
+        **warning_decision_type_cnt
+    }
+    
+    return jsonify({
+        'success': True,
+        'regulatory_insights': regulatory_insights,
+        'technical_decrees': technical_decrees,
+        'pharmacology_warnings': pharmacology_warnings
+    })
+
 
 if __name__ == '__main__':
     print("="*60)

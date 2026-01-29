@@ -18,6 +18,7 @@ class User(BaseModel):
     user_country = db.Column(db.String(100))
     user_licensestatus = db.Column(db.String(100))
     user_active = db.Column(db.Boolean, default=True)
+    meta_data = db.Column(db.JSON)
 
     company = db.relationship('Company', backref=db.backref('users', lazy=True))
 

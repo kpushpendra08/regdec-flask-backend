@@ -12,3 +12,5 @@ class Company(BaseModel):
     company_country = db.Column(db.String(100))
     company_license_status = db.Column(db.String(100))
     company_active = db.Column(db.Boolean, default=True)
+    meta_data = db.Column(db.JSON)
+    
